@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>JETT | Rescue Command Center</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+:root{--bg:#080c14;--panel:#111a29;--panel2:#172337;--line:#26364c;--text:#f4f7fb;--muted:#9aabc0;--cyan:#48d9e9;--red:#ff6675;--green:#58d6a2;--amber:#ffc36b}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 75% -15%,#17364b 0,transparent 42%),var(--bg);color:var(--text);font:14px Inter,Segoe UI,Arial,sans-serif}
+header{height:72px;border-bottom:1px solid #ffffff12;display:flex;align-items:center;justify-content:space-between;padding:0 4vw;background:#080c14e8;position:sticky;top:0;z-index:20;backdrop-filter:blur(12px)}
+.logo{font-size:25px;letter-spacing:5px;font-weight:900}.logo b{color:var(--cyan)}.live{color:var(--green);font-size:11px;letter-spacing:1px;border:1px solid #58d6a255;padding:8px 12px;border-radius:30px}
+.layout{max-width:1450px;margin:auto;padding:28px 3vw 60px}.intro{display:flex;justify-content:space-between;align-items:end;gap:20px;flex-wrap:wrap;margin-bottom:22px}.eyebrow{color:var(--cyan);font-weight:800;letter-spacing:3px;font-size:10px}.intro h1{font-size:clamp(28px,4vw,43px);margin:8px 0}.muted{color:var(--muted);line-height:1.55}
+.stats{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin:20px 0}.stat,.panel{background:linear-gradient(145deg,#142033,#0e1623);border:1px solid var(--line);border-radius:17px}.stat{padding:17px}.stat strong{font-size:27px;display:block}.stat span{color:var(--muted);font-size:12px}.stat.alert strong{color:var(--red)}
+.grid{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(300px,1fr);gap:16px}.panel{padding:20px;margin-bottom:16px}.panel h2{font-size:17px;margin:0 0 16px}.section-head{display:flex;align-items:center;justify-content:space-between;gap:10px}.pill{background:#24364c;color:#cde5f2;border-radius:30px;padding:6px 9px;font-size:10px}
+form.fields{display:grid;grid-template-columns:1fr 1fr;gap:11px}.field{display:flex;flex-direction:column;gap:6px}.field.full{grid-column:1/-1}label{font-size:12px;color:#bdcadd}input,select,textarea{width:100%;background:#09111d;border:1px solid #31425a;border-radius:9px;color:var(--text);padding:11px;font:inherit}textarea{min-height:74px;resize:vertical}.btn{border:0;border-radius:9px;background:var(--cyan);color:#07131a;padding:10px 14px;font-weight:800;cursor:pointer}.btn.alt{background:#27374e;color:#e8f1fa;border:1px solid #3b506d}.btn.red{background:#512630;color:#ffdce1;border:1px solid #803744}.btn.small{padding:7px 9px;font-size:11px}.btn:disabled{opacity:.4;cursor:not-allowed}
+.actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.flash{padding:11px 14px;border-radius:10px;margin:0 0 14px;background:#183d32;color:#b9ffe0}.flash.error{background:#49252b;color:#ffdce1}
+#map{height:345px;border-radius:12px;overflow:hidden;background:#182437}.incident{border-top:1px solid #ffffff12;padding:14px 0;display:grid;grid-template-columns:1fr auto;gap:10px}.incident:first-of-type{border-top:0}.incident h3{font-size:14px;margin:0 0 5px}.incident p{font-size:12px;color:var(--muted);margin:4px 0;line-height:1.45}.badge{display:inline-block;font-size:10px;border-radius:30px;padding:5px 8px;background:#26374d}.Critical,.High{background:#522631;color:#ffdce0}.Medium{background:#58421f;color:#ffe5b7}.Low{background:#174333;color:#c2ffe5}.status{color:var(--muted);font-size:11px}
+.team{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:12px 0;border-top:1px solid #ffffff12}.team:first-of-type{border-top:0}.team strong{font-size:13px}.team small{display:block;color:var(--muted);margin-top:4px}
+.route-row{display:grid;grid-template-columns:1fr 1fr;gap:9px}.route-row button{grid-column:1/-1}.chart-wrap{height:220px}
+footer{text-align:center;color:#74869d;font-size:11px;padding:20px}
+@media(max-width:900px){.grid{grid-template-columns:1fr}.stats{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:540px){header{padding:0 16px}.layout{padding:22px 14px}.stats{grid-template-columns:repeat(2,1fr)}form.fields{grid-template-columns:1fr}.field.full{grid-column:1}.incident{grid-template-columns:1fr}.route-row{grid-template-columns:1fr}.route-row button{grid-column:1}}
+</style></head><body>
+<header><div class="logo">J<b>E</b>TT</div><div class="live">● COMMAND CENTER ONLINE</div></header>
+<div class="layout">
+<div class="intro"><div><div class="eyebrow">DISASTER RESPONSE • PUNJAB DEMO</div><h1>Rescue Command Center</h1><div class="muted">Monitor incidents, coordinate response teams and review mapped reports.</div></div><div class="pill">LOCAL DEMO DATABASE</div></div>
+{% with messages = get_flashed_messages(with_categories=true) %}{% for category,message in messages %}<div class="flash {{'error' if category=='error' else ''}}">{{message}}</div>{% endfor %}{% endwith %}
+<div class="stats">
+<div class="stat"><strong>{{stats.total}}</strong><span>Total incidents</span></div>
+<div class="stat alert"><strong>{{stats.open}}</strong><span>Open incidents</span></div>
+<div class="stat"><strong>{{stats.assigned}}</strong><span>Assigned</span></div>
+<div class="stat"><strong>{{stats.resolved}}</strong><span>Resolved</span></div>
+<div class="stat"><strong>{{stats.available}}</strong><span>Available teams</span></div>
+</div>
+<div class="grid"><div>
+<section class="panel"><h2>＋ Register an incident</h2>
+<form class="fields" action="{{url_for('new_incident')}}" method="post">
+<div class="field"><label>Incident title *</label><input name="title" required placeholder="e.g. Road blocked by flood"></div>
+<div class="field"><label>Incident category</label><select name="kind"><option>Flood</option><option>Fire</option><option>Earthquake</option><option>Storm</option><option>Road accident</option><option>Building damage</option><option>Other</option></select></div>
+<div class="field"><label>Severity</label><select name="severity"><option>Low</option><option selected>Medium</option><option>High</option><option>Critical</option></select></div>
+<div class="field"><label>Location / district *</label><input name="location" required placeholder="e.g. Mohali, Punjab"></div>
+<div class="field"><label>Latitude (optional)</label><input name="latitude" type="number" step="any" placeholder="30.7046"></div>
+<div class="field"><label>Longitude (optional)</label><input name="longitude" type="number" step="any" placeholder="76.7179"></div>
+<div class="field full"><label>Description</label><textarea name="description" placeholder="Short incident details"></textarea></div>
+<div class="field full"><button class="btn" type="submit">Save incident report</button></div>
+</form></section>
+<section class="panel"><div class="section-head"><h2>Incident priority queue</h2><span class="pill">CRITICAL → LOW</span></div>
+{% for i in incidents %}<div class="incident"><div><h3>#{{i.id}} · {{i.title}}</h3><p>{{i.kind}} · {{i.location}} · {{i.created_at}}</p><p>{{i.description or 'No description provided.'}}</p><span class="badge {{i.severity}}">{{i.severity}}</span> <span class="status">Status: {{i.status}}{% if i.assigned_team %} · {{i.assigned_team}}{% endif %}</span>
+{% if i.status != 'Resolved' %}<form class="actions" style="margin-top:9px" action="{{url_for('assign',incident_id=i.id)}}" method="post"><select name="team_id" style="max-width:190px;padding:7px" required><option value="">Choose available team</option>{% for t in teams %}{% if t.status == 'Available' %}<option value="{{t.id}}">{{t.name}}</option>{% endif %}{% endfor %}</select><button class="btn small" type="submit" {% if not teams|selectattr('status','equalto','Available')|list %}disabled{% endif %}>Assign team</button></form>
+<form style="margin-top:7px" action="{{url_for('resolve',incident_id=i.id)}}" method="post"><button class="btn alt small" type="submit">Mark resolved</button></form>{% endif %}</div><div><span class="badge {{i.severity}}">{{i.severity}}</span></div></div>{% else %}<p class="muted">No incidents yet. Add a report above.</p>{% endfor %}
+</section></div>
+<div>
+<section class="panel"><h2>Incident map</h2><div id="map"></div><p class="muted" style="font-size:11px;margin-bottom:0">Only reports with coordinates appear. Map tiles require internet access.</p></section>
+<section class="panel"><h2>Response teams</h2>{% for t in teams %}<div class="team"><div><strong>{{t.name}}</strong><small>{{t.specialty}} · {{t.status}}</small></div>{% if t.status != 'Available' %}<form action="{{url_for('release',team_id=t.id)}}" method="post"><button class="btn alt small">Release</button></form>{% else %}<span class="badge Low">Available</span>{% endif %}</div>{% endfor %}</section>
+<section class="panel"><h2>Incident analytics</h2><div class="chart-wrap"><canvas id="chart"></canvas></div></section>
+<section class="panel"><h2>DSA route demonstration</h2><p class="muted" style="font-size:12px">Dijkstra's algorithm on a small sample graph. These illustrative distances are not live road directions.</p><form class="route-row" action="{{url_for('route_demo')}}" method="post"><select name="start"><option>Control Room</option><option>Mohali</option><option>Chandigarh</option><option>Kharar</option><option>Zirakpur</option></select><select name="goal"><option>Mohali</option><option>Chandigarh</option><option>Kharar</option><option>Zirakpur</option><option>Control Room</option></select><button class="btn" type="submit">Calculate sample shortest path</button></form></section>
+<section class="panel"><h2>Demo controls</h2><p class="muted" style="font-size:12px">Clear demo incidents and release all teams.</p><form action="{{url_for('reset_demo')}}" method="post" onsubmit="return confirm('Clear all incidents from the demo database?')"><button class="btn red small">Reset demo data</button></form></section>
+</div></div>
+</div><footer>JETT student project · Flask + SQLite + Priority Queue + Dijkstra · Not an official emergency dispatch service</footer>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const map=L.map('map').setView([30.72,76.76],10);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap contributors'}).addTo(map);
+fetch('/api/incidents').then(r=>r.json()).then(items=>{items.forEach(i=>{const color= i.severity==='Critical'||i.severity==='High'?'#ff6675':'#48d9e9';L.circleMarker([i.latitude,i.longitude],{radius:9,color,fillColor:color,fillOpacity:.75}).addTo(map).bindPopup(`<b>${i.title}</b><br>${i.kind} · ${i.severity}<br>${i.location}<br>Status: ${i.status}`)})});
+new Chart(document.getElementById('chart'),{type:'doughnut',data:{labels:['Open','Assigned','Resolved'],datasets:[{data:[{{stats.open}},{{stats.assigned}},{{stats.resolved}}],backgroundColor:['#ff6675','#ffc36b','#58d6a2'],borderColor:'#111a29',borderWidth:3}]},options:{maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{color:'#c7d4e5',padding:16}}}}});
+</script></body></html>
