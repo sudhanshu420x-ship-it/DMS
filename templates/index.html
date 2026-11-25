@@ -1,65 +1,887 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>JETT | Rescue Command Center</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
-:root{--bg:#080c14;--panel:#111a29;--panel2:#172337;--line:#26364c;--text:#f4f7fb;--muted:#9aabc0;--cyan:#48d9e9;--red:#ff6675;--green:#58d6a2;--amber:#ffc36b}
-*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 75% -15%,#17364b 0,transparent 42%),var(--bg);color:var(--text);font:14px Inter,Segoe UI,Arial,sans-serif}
-header{height:72px;border-bottom:1px solid #ffffff12;display:flex;align-items:center;justify-content:space-between;padding:0 4vw;background:#080c14e8;position:sticky;top:0;z-index:20;backdrop-filter:blur(12px)}
-.logo{font-size:25px;letter-spacing:5px;font-weight:900}.logo b{color:var(--cyan)}.live{color:var(--green);font-size:11px;letter-spacing:1px;border:1px solid #58d6a255;padding:8px 12px;border-radius:30px}
-.layout{max-width:1450px;margin:auto;padding:28px 3vw 60px}.intro{display:flex;justify-content:space-between;align-items:end;gap:20px;flex-wrap:wrap;margin-bottom:22px}.eyebrow{color:var(--cyan);font-weight:800;letter-spacing:3px;font-size:10px}.intro h1{font-size:clamp(28px,4vw,43px);margin:8px 0}.muted{color:var(--muted);line-height:1.55}
-.stats{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin:20px 0}.stat,.panel{background:linear-gradient(145deg,#142033,#0e1623);border:1px solid var(--line);border-radius:17px}.stat{padding:17px}.stat strong{font-size:27px;display:block}.stat span{color:var(--muted);font-size:12px}.stat.alert strong{color:var(--red)}
-.grid{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(300px,1fr);gap:16px}.panel{padding:20px;margin-bottom:16px}.panel h2{font-size:17px;margin:0 0 16px}.section-head{display:flex;align-items:center;justify-content:space-between;gap:10px}.pill{background:#24364c;color:#cde5f2;border-radius:30px;padding:6px 9px;font-size:10px}
-form.fields{display:grid;grid-template-columns:1fr 1fr;gap:11px}.field{display:flex;flex-direction:column;gap:6px}.field.full{grid-column:1/-1}label{font-size:12px;color:#bdcadd}input,select,textarea{width:100%;background:#09111d;border:1px solid #31425a;border-radius:9px;color:var(--text);padding:11px;font:inherit}textarea{min-height:74px;resize:vertical}.btn{border:0;border-radius:9px;background:var(--cyan);color:#07131a;padding:10px 14px;font-weight:800;cursor:pointer}.btn.alt{background:#27374e;color:#e8f1fa;border:1px solid #3b506d}.btn.red{background:#512630;color:#ffdce1;border:1px solid #803744}.btn.small{padding:7px 9px;font-size:11px}.btn:disabled{opacity:.4;cursor:not-allowed}
-.actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.flash{padding:11px 14px;border-radius:10px;margin:0 0 14px;background:#183d32;color:#b9ffe0}.flash.error{background:#49252b;color:#ffdce1}
-#map{height:345px;border-radius:12px;overflow:hidden;background:#182437}.incident{border-top:1px solid #ffffff12;padding:14px 0;display:grid;grid-template-columns:1fr auto;gap:10px}.incident:first-of-type{border-top:0}.incident h3{font-size:14px;margin:0 0 5px}.incident p{font-size:12px;color:var(--muted);margin:4px 0;line-height:1.45}.badge{display:inline-block;font-size:10px;border-radius:30px;padding:5px 8px;background:#26374d}.Critical,.High{background:#522631;color:#ffdce0}.Medium{background:#58421f;color:#ffe5b7}.Low{background:#174333;color:#c2ffe5}.status{color:var(--muted);font-size:11px}
-.team{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:12px 0;border-top:1px solid #ffffff12}.team:first-of-type{border-top:0}.team strong{font-size:13px}.team small{display:block;color:var(--muted);margin-top:4px}
-.route-row{display:grid;grid-template-columns:1fr 1fr;gap:9px}.route-row button{grid-column:1/-1}.chart-wrap{height:220px}
-footer{text-align:center;color:#74869d;font-size:11px;padding:20px}
-@media(max-width:900px){.grid{grid-template-columns:1fr}.stats{grid-template-columns:repeat(3,1fr)}}
-@media(max-width:540px){header{padding:0 16px}.layout{padding:22px 14px}.stats{grid-template-columns:repeat(2,1fr)}form.fields{grid-template-columns:1fr}.field.full{grid-column:1}.incident{grid-template-columns:1fr}.route-row{grid-template-columns:1fr}.route-row button{grid-column:1}}
-</style></head><body>
-<header><div class="logo">J<b>E</b>TT</div><div class="live">● COMMAND CENTER ONLINE</div></header>
-<div class="layout">
-<div class="intro"><div><div class="eyebrow">DISASTER RESPONSE • PUNJAB DEMO</div><h1>Rescue Command Center</h1><div class="muted">Monitor incidents, coordinate response teams and review mapped reports.</div></div><div class="pill">LOCAL DEMO DATABASE</div></div>
-{% with messages = get_flashed_messages(with_categories=true) %}{% for category,message in messages %}<div class="flash {{'error' if category=='error' else ''}}">{{message}}</div>{% endfor %}{% endwith %}
-<div class="stats">
-<div class="stat"><strong>{{stats.total}}</strong><span>Total incidents</span></div>
-<div class="stat alert"><strong>{{stats.open}}</strong><span>Open incidents</span></div>
-<div class="stat"><strong>{{stats.assigned}}</strong><span>Assigned</span></div>
-<div class="stat"><strong>{{stats.resolved}}</strong><span>Resolved</span></div>
-<div class="stat"><strong>{{stats.available}}</strong><span>Available teams</span></div>
+:root{
+  --bg:#060b15;--panel:rgba(14,22,38,.96);--panel2:rgba(20,32,54,.8);
+  --border:rgba(255,255,255,.07);--text:#e8f4f8;--muted:#8899aa;
+  --cyan:#00e5ff;--red:#ff4757;--green:#2ed573;--amber:#ffa502;
+  --yellow:#eccc68;--purple:#a29bfe;
+  --red-d:rgba(255,71,87,.12);--green-d:rgba(46,213,115,.12);
+  --amber-d:rgba(255,165,2,.12);--cyan-d:rgba(0,229,255,.1);
+  --purple-d:rgba(162,155,254,.12);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  background:var(--bg);color:var(--text);
+  font:14px/1.55 Inter,'Segoe UI',system-ui,sans-serif;
+  min-height:100vh;
+  background-image:
+    radial-gradient(ellipse at 80% -10%,rgba(0,100,200,.18) 0%,transparent 50%),
+    radial-gradient(ellipse at 15% 110%,rgba(0,229,255,.06) 0%,transparent 50%);
+}
+body::before{
+  content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+  background-image:
+    linear-gradient(rgba(0,229,255,.022) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(0,229,255,.022) 1px,transparent 1px);
+  background-size:50px 50px;
+}
+
+/* ── Header ── */
+header{
+  position:sticky;top:0;z-index:100;height:62px;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 24px;
+  background:rgba(6,11,21,.93);backdrop-filter:blur(18px);
+  border-bottom:1px solid var(--border);
+}
+.logo{font-size:21px;font-weight:900;letter-spacing:6px}
+.logo .a{color:var(--cyan)}
+.hdr-mid{
+  display:flex;align-items:center;gap:9px;
+  font-size:11px;font-weight:600;letter-spacing:2px;color:var(--muted);
+}
+.sdot{width:7px;height:7px;border-radius:50%;background:var(--green);animation:blink 2s infinite}
+.hdr-r{display:flex;align-items:center;gap:14px}
+.alert-badge{
+  background:var(--red-d);border:1px solid rgba(255,71,87,.35);
+  color:var(--red);padding:5px 13px;border-radius:20px;
+  font-size:11px;font-weight:700;letter-spacing:1px;min-width:88px;text-align:center;
+}
+.clock{font-family:'Courier New',monospace;font-size:12px;color:var(--cyan);letter-spacing:1px;min-width:76px}
+
+/* ── Layout ── */
+.layout{max-width:1500px;margin:0 auto;padding:22px 20px 60px;position:relative;z-index:1}
+
+/* Stats */
+.stats-row{display:grid;grid-template-columns:repeat(6,1fr);gap:11px;margin-bottom:18px}
+.sc{
+  background:var(--panel);border:1px solid var(--border);border-radius:14px;
+  padding:16px;transition:transform .2s,border-color .2s;cursor:default;
+}
+.sc:hover{transform:translateY(-2px);border-color:rgba(0,229,255,.2)}
+.sc .v{font-size:28px;font-weight:700;line-height:1;margin-bottom:5px}
+.sc .l{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px}
+.sc.r .v{color:var(--red)}.sc.o .v{color:var(--red)}.sc.am .v{color:var(--amber)}
+.sc.g .v{color:var(--green)}.sc.c .v{color:var(--cyan)}
+
+/* Main grid */
+.main-grid{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:16px;align-items:start}
+
+/* Panel */
+.panel{
+  background:var(--panel);border:1px solid var(--border);
+  border-radius:16px;padding:20px;margin-bottom:14px;backdrop-filter:blur(8px);
+}
+.panel:last-child{margin-bottom:0}
+.ph{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px}
+.ph h2{font-size:14px;font-weight:700}
+.pill{
+  background:var(--cyan-d);color:var(--cyan);border:1px solid rgba(0,229,255,.2);
+  border-radius:20px;padding:3px 10px;font-size:10px;font-weight:600;letter-spacing:1px;
+}
+.mt{color:var(--muted);line-height:1.55}
+
+/* Form */
+.fg{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+.f{display:flex;flex-direction:column;gap:5px}
+.f.full{grid-column:1/-1}
+label{font-size:10px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+input,select,textarea{
+  background:rgba(10,20,36,.8);border:1px solid rgba(255,255,255,.08);
+  border-radius:8px;color:var(--text);padding:9px 11px;font:inherit;
+  transition:border-color .15s,box-shadow .15s;
+}
+input:focus,select:focus,textarea:focus{
+  outline:none;border-color:rgba(0,229,255,.4);
+  box-shadow:0 0 0 3px rgba(0,229,255,.07);
+}
+textarea{min-height:68px;resize:vertical}
+select option{background:#0a1422}
+
+/* Auto-detect banner */
+.det-banner{
+  display:flex;align-items:center;gap:10px;
+  padding:9px 13px;border-radius:9px;margin-bottom:12px;
+  font-size:12px;font-weight:500;border:1px solid;
+  animation:fadeIn .3s ease;
+}
+.det-banner.hidden{display:none}
+.det-banner.critical{background:var(--red-d);border-color:rgba(255,71,87,.3);color:#ffaab0}
+.det-banner.high{background:var(--amber-d);border-color:rgba(255,165,2,.3);color:#ffd080}
+.det-banner.medium{background:rgba(236,204,104,.1);border-color:rgba(236,204,104,.3);color:var(--yellow)}
+.det-banner.low{background:var(--green-d);border-color:rgba(46,213,115,.3);color:var(--green)}
+.db-x{margin-left:auto;background:none;border:none;color:inherit;cursor:pointer;opacity:.7;font-size:14px;line-height:1}
+
+/* Buttons */
+.btn{
+  display:inline-flex;align-items:center;gap:5px;border:0;border-radius:8px;
+  font-size:12px;font-weight:600;padding:8px 14px;cursor:pointer;
+  transition:all .15s;white-space:nowrap;font-family:inherit;
+}
+.btn:disabled{opacity:.35;cursor:not-allowed}
+.btn:active:not(:disabled){transform:scale(.97)}
+.btn.prim{background:var(--cyan);color:#060b15;width:100%;justify-content:center}
+.btn.prim:hover:not(:disabled){background:#33ebff}
+.btn.sec{background:rgba(255,255,255,.07);color:var(--text);border:1px solid var(--border)}
+.btn.sec:hover:not(:disabled){background:rgba(255,255,255,.12)}
+.btn.asgn{background:rgba(0,229,255,.12);color:var(--cyan);border:1px solid rgba(0,229,255,.25)}
+.btn.asgn:hover:not(:disabled){background:rgba(0,229,255,.2)}
+.btn.res{background:var(--green-d);color:var(--green);border:1px solid rgba(46,213,115,.3)}
+.btn.res:hover{background:rgba(46,213,115,.22)}
+.btn.rte{background:var(--purple-d);color:var(--purple);border:1px solid rgba(162,155,254,.25)}
+.btn.rte:hover{background:rgba(162,155,254,.22)}
+.btn.dng{background:var(--red-d);color:var(--red);border:1px solid rgba(255,71,87,.3)}
+.btn.dng:hover{background:rgba(255,71,87,.22)}
+.btn.sm{padding:5px 10px;font-size:11px}
+
+/* Incident cards */
+.ic{
+  border:1px solid var(--border);border-radius:11px;
+  padding:13px;margin-bottom:9px;
+  border-left:3px solid rgba(255,255,255,.1);
+  transition:border-color .2s;
+}
+.ic:last-child{margin-bottom:0}
+.ic.critical{border-left-color:var(--red);background:rgba(255,71,87,.035)}
+.ic.high{border-left-color:var(--amber)}
+.ic.medium{border-left-color:var(--yellow)}
+.ic.low{border-left-color:var(--green)}
+.ic.resolved{opacity:.42}
+.pc{animation:pcrit 2.5s infinite}
+@keyframes pcrit{0%,100%{box-shadow:0 0 0 0 rgba(255,71,87,0)}50%{box-shadow:0 0 0 6px rgba(255,71,87,.1)}}
+
+.it{font-size:13px;font-weight:600;display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-bottom:3px}
+.iid{color:var(--muted);font-size:11px;font-weight:400}
+.im{font-size:11px;color:var(--muted);margin-bottom:7px}
+.idesc{font-size:12px;color:#c0ccd8;line-height:1.5;margin-bottom:9px}
+.iteam{font-size:11px;color:var(--cyan);margin-bottom:8px}
+.iact{display:flex;gap:7px;flex-wrap:wrap;align-items:center}
+.inf{display:flex;gap:7px;align-items:center;flex-wrap:wrap}
+.inf select{
+  background:#0a1422;border:1px solid #26384f;border-radius:7px;
+  color:var(--text);padding:6px 9px;font:11px inherit;max-width:170px;
+}
+
+/* Badges */
+.sb,.sp{
+  display:inline-block;font-size:10px;font-weight:700;
+  padding:2px 8px;border-radius:20px;text-transform:uppercase;letter-spacing:.5px;border:1px solid;
+}
+.sb.critical,.sp.open{background:var(--red-d);color:var(--red);border-color:rgba(255,71,87,.3)}
+.sb.high{background:var(--amber-d);color:var(--amber);border-color:rgba(255,165,2,.3)}
+.sb.medium{background:rgba(236,204,104,.1);color:var(--yellow);border-color:rgba(236,204,104,.3)}
+.sb.low,.sp.available,.sb.ready{background:var(--green-d);color:var(--green);border-color:rgba(46,213,115,.3)}
+.sp.assigned{background:var(--amber-d);color:var(--amber);border-color:rgba(255,165,2,.3)}
+.sp.resolved{background:var(--green-d);color:var(--green);border-color:rgba(46,213,115,.3)}
+
+/* Map */
+.map-panel .ph{margin-bottom:12px}
+#map{height:355px;border-radius:10px;overflow:hidden;background:#0a1422;margin-bottom:9px}
+.mc{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.gps-pill{
+  font-size:10px;color:var(--cyan);letter-spacing:1px;
+  background:var(--cyan-d);border:1px solid rgba(0,229,255,.2);
+  padding:3px 9px;border-radius:20px;font-weight:600;animation:blink 3s infinite;
+}
+.ri{
+  background:var(--purple-d);border:1px solid rgba(162,155,254,.2);
+  border-radius:8px;padding:9px 13px;font-size:12px;
+  display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+}
+.ri.hidden{display:none}
+.ri strong{color:var(--purple)}
+
+/* Teams */
+.tr{display:flex;align-items:center;gap:11px;padding:11px 0;border-bottom:1px solid var(--border)}
+.tr:last-child{border-bottom:none;padding-bottom:0}
+.tr:first-child{padding-top:0}
+.tsd{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.tsd.available{background:var(--green)}
+.tsd.on-duty{background:var(--amber);animation:blink 1s infinite}
+.ti{flex:1}
+.ti strong{font-size:13px;display:block;margin-bottom:2px}
+.ti small{font-size:11px;color:var(--muted)}
+
+/* Charts */
+.cgrid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.cw{height:168px;display:flex;align-items:center;justify-content:center}
+.clabel{font-size:10px;color:var(--muted);margin-bottom:6px;text-align:center;text-transform:uppercase;letter-spacing:1px}
+
+/* Route demo */
+.rsg{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+
+/* Toasts */
+.toast-box{position:fixed;bottom:22px;right:22px;z-index:1000;display:flex;flex-direction:column;gap:9px;max-width:390px}
+.toast{
+  padding:11px 14px;border-radius:10px;font-size:13px;
+  display:flex;align-items:center;justify-content:space-between;gap:10px;
+  animation:slideIn .3s ease;box-shadow:0 4px 24px rgba(0,0,0,.35);
+  min-width:260px;border:1px solid;transition:opacity .4s;
+}
+.toast.success{background:rgba(46,213,115,.13);border-color:rgba(46,213,115,.3);color:#90ffe0}
+.toast.error{background:rgba(255,71,87,.13);border-color:rgba(255,71,87,.3);color:#ffa8b0}
+.toast-x{background:none;border:none;color:inherit;cursor:pointer;opacity:.7;font-size:16px;padding:0 2px;font-family:inherit}
+
+/* Map API Key Modal */
+.modal-bg{
+  position:fixed;inset:0;z-index:1100;background:rgba(4,8,16,.78);
+  backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:18px;
+}
+.modal-bg.hidden{display:none}
+.modal-box{
+  width:100%;max-width:440px;background:#0e1726;
+  border:1px solid rgba(0,229,255,.25);border-radius:16px;
+  padding:22px;box-shadow:0 18px 48px rgba(0,0,0,.6);animation:fadeIn .2s ease;
+}
+.modal-box h3{font-size:15px;margin-bottom:6px}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:14px;flex-wrap:wrap}
+.modal-box .btn.prim{width:auto}
+
+footer{text-align:center;color:#50657a;font-size:11px;padding:20px;position:relative;z-index:1}
+
+/* Keyframes */
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+@keyframes fadeIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
+@keyframes slideIn{from{transform:translateX(110%);opacity:0}to{transform:translateX(0);opacity:1}}
+@keyframes tm-pulse{0%{transform:scale(.3);opacity:.85}80%{transform:scale(1.4);opacity:.2}100%{transform:scale(1.6);opacity:0}}
+
+/* Responsive */
+@media(max-width:1120px){.main-grid{grid-template-columns:1fr}.stats-row{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:650px){
+  .stats-row{grid-template-columns:repeat(2,1fr)}
+  .fg{grid-template-columns:1fr}.f.full{grid-column:1}
+  .hdr-mid{display:none}.cgrid{grid-template-columns:1fr}
+  header{padding:0 14px}.layout{padding:16px 14px 60px}
+  .rsg{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<header>
+  <div class="logo">J<span class="a">E</span>TT</div>
+  <div class="hdr-mid"><span class="sdot"></span>COMMAND CENTER ONLINE</div>
+  <div class="hdr-r">
+    <div class="alert-badge" id="hdr-alerts">{{ stats.open }} OPEN</div>
+    <div class="clock" id="clock">--:--:--</div>
+  </div>
+</header>
+
+<!-- Toast container (server-side flash messages) -->
+<div class="toast-box" id="toast-box">
+{% with messages = get_flashed_messages(with_categories=true) %}
+{% for category, message in messages %}
+<div class="toast {{ 'error' if category == 'error' else 'success' }}" data-auto>
+  <span>{{ message }}</span>
+  <button class="toast-x" onclick="this.parentElement.remove()">×</button>
 </div>
-<div class="grid"><div>
-<section class="panel"><h2>＋ Register an incident</h2>
-<form class="fields" action="{{url_for('new_incident')}}" method="post">
-<div class="field"><label>Incident title *</label><input name="title" required placeholder="e.g. Road blocked by flood"></div>
-<div class="field"><label>Incident category</label><select name="kind"><option>Flood</option><option>Fire</option><option>Earthquake</option><option>Storm</option><option>Road accident</option><option>Building damage</option><option>Other</option></select></div>
-<div class="field"><label>Severity</label><select name="severity"><option>Low</option><option selected>Medium</option><option>High</option><option>Critical</option></select></div>
-<div class="field"><label>Location / district *</label><input name="location" required placeholder="e.g. Mohali, Punjab"></div>
-<div class="field"><label>Latitude (optional)</label><input name="latitude" type="number" step="any" placeholder="30.7046"></div>
-<div class="field"><label>Longitude (optional)</label><input name="longitude" type="number" step="any" placeholder="76.7179"></div>
-<div class="field full"><label>Description</label><textarea name="description" placeholder="Short incident details"></textarea></div>
-<div class="field full"><button class="btn" type="submit">Save incident report</button></div>
-</form></section>
-<section class="panel"><div class="section-head"><h2>Incident priority queue</h2><span class="pill">CRITICAL → LOW</span></div>
-{% for i in incidents %}<div class="incident"><div><h3>#{{i.id}} · {{i.title}}</h3><p>{{i.kind}} · {{i.location}} · {{i.created_at}}</p><p>{{i.description or 'No description provided.'}}</p><span class="badge {{i.severity}}">{{i.severity}}</span> <span class="status">Status: {{i.status}}{% if i.assigned_team %} · {{i.assigned_team}}{% endif %}</span>
-{% if i.status != 'Resolved' %}<form class="actions" style="margin-top:9px" action="{{url_for('assign',incident_id=i.id)}}" method="post"><select name="team_id" style="max-width:190px;padding:7px" required><option value="">Choose available team</option>{% for t in teams %}{% if t.status == 'Available' %}<option value="{{t.id}}">{{t.name}}</option>{% endif %}{% endfor %}</select><button class="btn small" type="submit" {% if not teams|selectattr('status','equalto','Available')|list %}disabled{% endif %}>Assign team</button></form>
-<form style="margin-top:7px" action="{{url_for('resolve',incident_id=i.id)}}" method="post"><button class="btn alt small" type="submit">Mark resolved</button></form>{% endif %}</div><div><span class="badge {{i.severity}}">{{i.severity}}</span></div></div>{% else %}<p class="muted">No incidents yet. Add a report above.</p>{% endfor %}
-</section></div>
-<div>
-<section class="panel"><h2>Incident map</h2><div id="map"></div><p class="muted" style="font-size:11px;margin-bottom:0">Only reports with coordinates appear. Map tiles require internet access.</p></section>
-<section class="panel"><h2>Response teams</h2>{% for t in teams %}<div class="team"><div><strong>{{t.name}}</strong><small>{{t.specialty}} · {{t.status}}</small></div>{% if t.status != 'Available' %}<form action="{{url_for('release',team_id=t.id)}}" method="post"><button class="btn alt small">Release</button></form>{% else %}<span class="badge Low">Available</span>{% endif %}</div>{% endfor %}</section>
-<section class="panel"><h2>Incident analytics</h2><div class="chart-wrap"><canvas id="chart"></canvas></div></section>
-<section class="panel"><h2>DSA route demonstration</h2><p class="muted" style="font-size:12px">Dijkstra's algorithm on a small sample graph. These illustrative distances are not live road directions.</p><form class="route-row" action="{{url_for('route_demo')}}" method="post"><select name="start"><option>Control Room</option><option>Mohali</option><option>Chandigarh</option><option>Kharar</option><option>Zirakpur</option></select><select name="goal"><option>Mohali</option><option>Chandigarh</option><option>Kharar</option><option>Zirakpur</option><option>Control Room</option></select><button class="btn" type="submit">Calculate sample shortest path</button></form></section>
-<section class="panel"><h2>Demo controls</h2><p class="muted" style="font-size:12px">Clear demo incidents and release all teams.</p><form action="{{url_for('reset_demo')}}" method="post" onsubmit="return confirm('Clear all incidents from the demo database?')"><button class="btn red small">Reset demo data</button></form></section>
-</div></div>
-</div><footer>JETT student project · Flask + SQLite + Priority Queue + Dijkstra · Not an official emergency dispatch service</footer>
+{% endfor %}
+{% endwith %}
+</div>
+
+<div class="layout">
+
+  <!-- Stats Row -->
+  <div class="stats-row">
+    <div class="sc"><div class="v">{{ stats.total }}</div><div class="l">Total Incidents</div></div>
+    <div class="sc r"><div class="v">{{ stats.open }}</div><div class="l">Open</div></div>
+    <div class="sc o"><div class="v">{{ stats.critical }}</div><div class="l">Critical</div></div>
+    <div class="sc am"><div class="v">{{ stats.assigned }}</div><div class="l">Assigned</div></div>
+    <div class="sc g"><div class="v">{{ stats.resolved }}</div><div class="l">Resolved</div></div>
+    <div class="sc c"><div class="v">{{ stats.available }}</div><div class="l">Teams Ready</div></div>
+  </div>
+
+  <div class="main-grid">
+
+    <!-- LEFT column -->
+    <div>
+
+      <!-- New Incident Form -->
+      <section class="panel">
+        <div class="ph"><h2>＋ Report Incident</h2></div>
+        <div id="det-banner" class="det-banner hidden">
+          <span id="det-msg"></span>
+          <button class="db-x" onclick="hideBanner()">✕</button>
+        </div>
+        <form class="fg" action="{{ url_for('new_incident') }}" method="post">
+          <div class="f">
+            <label>Incident Title *</label>
+            <input name="title" required placeholder="e.g. Building fire in Sector 22" oninput="triggerDetect()">
+          </div>
+          <div class="f">
+            <label>Category</label>
+            <select name="kind">
+              <option>Flood</option><option>Fire</option><option>Earthquake</option>
+              <option>Storm</option><option>Road accident</option>
+              <option>Building damage</option><option>Other</option>
+            </select>
+          </div>
+          <div class="f">
+            <label>Severity</label>
+            <select name="severity">
+              <option>Low</option><option selected>Medium</option>
+              <option>High</option><option>Critical</option>
+            </select>
+          </div>
+          <div class="f">
+            <label>Location *</label>
+            <input name="location" required placeholder="e.g. Mohali, Punjab">
+          </div>
+          <div class="f">
+            <label>Latitude (optional)</label>
+            <input name="latitude" type="number" step="any" placeholder="30.7046">
+          </div>
+          <div class="f">
+            <label>Longitude (optional)</label>
+            <input name="longitude" type="number" step="any" placeholder="76.7179">
+          </div>
+          <div class="f full">
+            <label>Description</label>
+            <textarea name="description" placeholder="Short incident details…" oninput="triggerDetect()"></textarea>
+          </div>
+          <div class="f full">
+            <button class="btn prim" type="submit">Save Incident Report</button>
+          </div>
+        </form>
+      </section>
+
+      <!-- Priority Queue -->
+      <section class="panel">
+        <div class="ph">
+          <h2>Incident Priority Queue</h2>
+          <span class="pill">CRITICAL → LOW</span>
+        </div>
+
+        {% for i in incidents %}
+        <div class="ic {{ i.severity | lower }} {% if i.status == 'Resolved' %}resolved{% endif %} {% if i.severity == 'Critical' and i.status != 'Resolved' %}pc{% endif %}">
+          <div class="it">
+            <span class="iid">#{{ i.id }}</span>
+            {{ i.title }}
+            <span class="sb {{ i.severity | lower }}">{{ i.severity }}</span>
+            <span class="sp {{ i.status | lower }}">{{ i.status }}</span>
+          </div>
+          <div class="im">{{ i.kind }} &nbsp;·&nbsp; {{ i.location }} &nbsp;·&nbsp; {{ i.created_at }}</div>
+          {% if i.description %}<div class="idesc">{{ i.description }}</div>{% endif %}
+          {% if i.assigned_team %}<div class="iteam">👥 {{ i.assigned_team }}</div>{% endif %}
+          {% if i.status != 'Resolved' %}
+          <div class="iact">
+            <form class="inf" action="{{ url_for('assign', incident_id=i.id) }}" method="post">
+              <select name="team_id" required>
+                <option value="">Assign team…</option>
+                {% for t in teams %}{% if t.status == 'Available' %}
+                <option value="{{ t.id }}">{{ t.name }}</option>
+                {% endif %}{% endfor %}
+              </select>
+              <button class="btn asgn sm" type="submit" {% if not teams | selectattr('status','equalto','Available') | list %}disabled{% endif %}>Assign</button>
+            </form>
+            <form action="{{ url_for('resolve', incident_id=i.id) }}" method="post">
+              <button class="btn res sm" type="submit">✓ Resolve</button>
+            </form>
+            {% if i.latitude %}
+            <button class="btn rte sm"
+              data-lat="{{ i.latitude }}" data-lon="{{ i.longitude }}" data-title="{{ i.title }}"
+              onclick="showRoute(parseFloat(this.dataset.lat),parseFloat(this.dataset.lon),this.dataset.title)">
+              📍 Navigate
+            </button>
+            {% endif %}
+          </div>
+          {% endif %}
+        </div>
+        {% else %}
+        <p class="mt">No incidents logged yet. Add a report above.</p>
+        {% endfor %}
+      </section>
+
+    </div><!-- /left -->
+
+    <!-- RIGHT column -->
+    <div>
+
+      <!-- Live Map -->
+      <section class="panel map-panel">
+        <div class="ph">
+          <h2>🗺 Live Tactical Map</h2>
+          <div class="mc">
+            <span class="gps-pill">📡 GPS LIVE</span>
+            <span class="pill" id="map-provider-badge">CARTO</span>
+            <button class="btn sec sm" type="button" onclick="openMapKeyModal()">🔑 Map Key</button>
+            <button class="btn sec sm" type="button" onclick="clearRoute()">Clear Route</button>
+          </div>
+        </div>
+        <div id="map"></div>
+        <div id="ri" class="ri hidden"></div>
+        <p class="mt" style="font-size:11px;margin-top:8px">
+          🔵 Teams · 🔴 Critical · 🟠 High · 🟡 Medium · 🟢 Low · ⬜ Control Room &nbsp;—&nbsp; Teams refresh every 5s.
+        </p>
+      </section>
+
+      <!-- Response Teams -->
+      <section class="panel">
+        <div class="ph">
+          <h2>Response Teams</h2>
+          <span class="pill">{{ stats.available }}/{{ teams | length }} READY</span>
+        </div>
+        {% for t in teams %}
+        <div class="tr">
+          <div class="tsd {{ t.status | lower | replace(' ','-') }}"></div>
+          <div class="ti">
+            <strong>{{ t.name }}</strong>
+            <small>{{ t.specialty }} &nbsp;·&nbsp; {{ t.status }}</small>
+          </div>
+          {% if t.status != 'Available' %}
+          <form action="{{ url_for('release', team_id=t.id) }}" method="post">
+            <button class="btn sec sm" type="submit">Release</button>
+          </form>
+          {% else %}
+          <span class="sb ready">Ready</span>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </section>
+
+      <!-- Analytics -->
+      <section class="panel">
+        <div class="ph"><h2>📊 Incident Analytics</h2></div>
+        <div class="cgrid">
+          <div>
+            <div class="clabel">Status</div>
+            <div class="cw"><canvas id="cstat"></canvas></div>
+          </div>
+          <div>
+            <div class="clabel">By Severity</div>
+            <div class="cw"><canvas id="csev"></canvas></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Dijkstra Demo -->
+      <section class="panel">
+        <div class="ph"><h2>🧮 Dijkstra Route Demo</h2></div>
+        <p class="mt" style="font-size:11px;margin-bottom:12px">
+          Illustrative DSA shortest-path demo — not live road routing.
+        </p>
+        <form action="{{ url_for('route_demo') }}" method="post">
+          <div class="rsg" style="margin-bottom:10px">
+            <select name="start">
+              <option>Control Room</option><option>Mohali</option>
+              <option>Chandigarh</option><option>Kharar</option><option>Zirakpur</option>
+            </select>
+            <select name="goal">
+              <option>Mohali</option><option>Chandigarh</option>
+              <option>Kharar</option><option>Zirakpur</option><option>Control Room</option>
+            </select>
+          </div>
+          <button class="btn prim" type="submit">Calculate Shortest Path</button>
+        </form>
+      </section>
+
+      <!-- Reset -->
+      <section class="panel">
+        <div class="ph"><h2>⚙ Demo Controls</h2></div>
+        <p class="mt" style="font-size:11px;margin-bottom:12px">Clear all demo incidents and release all teams.</p>
+        <form action="{{ url_for('reset_demo') }}" method="post"
+              onsubmit="return confirm('Clear all incidents from the demo database?')">
+          <button class="btn dng sm" type="submit">Reset Demo Data</button>
+        </form>
+      </section>
+
+    </div><!-- /right -->
+  </div><!-- /main-grid -->
+</div><!-- /layout -->
+
+<!-- Map API Key Modal -->
+<div id="map-key-modal" class="modal-bg hidden" onclick="if(event.target===this)closeMapKeyModal()">
+  <div class="modal-box">
+    <h3>🔑 Configure Map API Key</h3>
+    <p class="mt" style="font-size:11px;margin-bottom:14px">
+      Connect a Mapbox or MapTiler API key for enhanced tiles &amp; routing, or leave blank for free CartoDB + OSRM.
+      For permanent deployment, set <code>MAP_API_KEY</code> in <code>.env</code> or Vercel Environment Variables.
+    </p>
+    <form onsubmit="saveMapKey(event)">
+      <div class="f" style="margin-bottom:11px">
+        <label>Map Provider</label>
+        <select id="mk-provider">
+          <option value="mapbox">Mapbox Dark (pk. token)</option>
+          <option value="mapbox-satellite">Mapbox Satellite Streets (pk. token)</option>
+          <option value="maptiler">MapTiler Dark</option>
+          <option value="carto">CartoDB Dark (Free / No Key)</option>
+        </select>
+      </div>
+      <div class="f">
+        <label>API Key / Access Token</label>
+        <input id="mk-key" type="text" placeholder="pk.eyJ1Ijo... or MapTiler key">
+      </div>
+      <div class="modal-actions">
+        <button class="btn dng sm" type="button" onclick="resetMapKey()">Use Server Default</button>
+        <button class="btn sec sm" type="button" onclick="closeMapKeyModal()">Cancel</button>
+        <button class="btn prim sm" type="submit">Apply Map Key</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<footer>JETT Student Project · Flask + SQLite + Priority Queue + Dijkstra + OSRM/Mapbox Navigation · Not an official emergency dispatch service</footer>
+
+<!-- Scripts -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-const map=L.map('map').setView([30.72,76.76],10);
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap contributors'}).addTo(map);
-fetch('/api/incidents').then(r=>r.json()).then(items=>{items.forEach(i=>{const color= i.severity==='Critical'||i.severity==='High'?'#ff6675':'#48d9e9';L.circleMarker([i.latitude,i.longitude],{radius:9,color,fillColor:color,fillOpacity:.75}).addTo(map).bindPopup(`<b>${i.title}</b><br>${i.kind} · ${i.severity}<br>${i.location}<br>Status: ${i.status}`)})});
-new Chart(document.getElementById('chart'),{type:'doughnut',data:{labels:['Open','Assigned','Resolved'],datasets:[{data:[{{stats.open}},{{stats.assigned}},{{stats.resolved}}],backgroundColor:['#ff6675','#ffc36b','#58d6a2'],borderColor:'#111a29',borderWidth:3}]},options:{maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{color:'#c7d4e5',padding:16}}}}});
-</script></body></html>
+// ── Embedded data from Flask ────────────────────────────────────────────────
+const STATS = {{ stats | tojson }};
+const INCIDENTS = {{ incidents | tojson }};
+const SERVER_MAP_CONFIG = {{ map_config | tojson }};
+const CTRL = [30.74, 76.78];   // Control Room coordinates
+
+// ── Clock ───────────────────────────────────────────────────────────────────
+function tickClock() {
+  const el = document.getElementById('clock');
+  if (el) el.textContent = new Date().toLocaleTimeString('en-IN', {
+    hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
+  });
+}
+setInterval(tickClock, 1000); tickClock();
+
+// ── Toast notifications ─────────────────────────────────────────────────────
+function showToast(msg, type = 'success') {
+  const box = document.getElementById('toast-box');
+  if (!box) return;
+  const el = document.createElement('div');
+  el.className = `toast ${type === 'error' ? 'error' : 'success'}`;
+  const span = document.createElement('span');
+  span.textContent = msg;
+  const btn = document.createElement('button');
+  btn.className = 'toast-x';
+  btn.textContent = '×';
+  btn.onclick = () => el.remove();
+  el.append(span, btn);
+  box.appendChild(el);
+  setTimeout(() => { el.style.opacity = '0'; }, 4600);
+  setTimeout(() => el.remove(), 5000);
+}
+
+document.querySelectorAll('.toast[data-auto]').forEach(t => {
+  setTimeout(() => { t.style.opacity = '0'; }, 4600);
+  setTimeout(() => t.remove(), 5000);
+});
+
+// ── Map & API Key Provider Layer ────────────────────────────────────────────
+const MAP_STORAGE_KEY = 'jett_map_config';
+const map = L.map('map').setView(CTRL, 11);
+let activeTileLayer = null;
+let tileErrorCount = 0;
+
+function getActiveMapConfig() {
+  try {
+    const saved = localStorage.getItem(MAP_STORAGE_KEY);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (parsed && parsed.provider) return parsed;
+    }
+  } catch(e) {}
+  return SERVER_MAP_CONFIG || { provider: 'carto', apiKey: '' };
+}
+
+function buildTileLayer(provider, apiKey) {
+  if ((provider === 'mapbox' || provider === 'mapbox-satellite') && apiKey) {
+    const style = provider === 'mapbox-satellite' ? 'satellite-streets-v12' : 'dark-v11';
+    return L.tileLayer(
+      `https://api.mapbox.com/styles/v1/mapbox/${style}/tiles/{z}/{x}/{y}?access_token={accessToken}`,
+      {
+        attribution: '© Mapbox © OpenStreetMap',
+        tileSize: 512, zoomOffset: -1, maxZoom: 19,
+        accessToken: apiKey
+      }
+    );
+  }
+  if (provider === 'maptiler' && apiKey) {
+    return L.tileLayer(
+      `https://api.maptiler.com/maps/streets-v2-dark/256/{z}/{x}/{y}.png?key={accessToken}`,
+      {
+        attribution: '© MapTiler © OpenStreetMap',
+        maxZoom: 19, accessToken: apiKey
+      }
+    );
+  }
+  return L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    attribution: '© OpenStreetMap contributors © CARTO',
+    subdomains: 'abcd', maxZoom: 18
+  });
+}
+
+function updateProviderBadge(provider, apiKey) {
+  const badge = document.getElementById('map-provider-badge');
+  if (!badge) return;
+  if (provider === 'mapbox' && apiKey) badge.textContent = '🔑 MAPBOX';
+  else if (provider === 'mapbox-satellite' && apiKey) badge.textContent = '🛰 MAPBOX SAT';
+  else if (provider === 'maptiler' && apiKey) badge.textContent = '🔑 MAPTILER';
+  else badge.textContent = 'CARTO FREE';
+}
+
+function applyMapLayer(provider, apiKey) {
+  if (activeTileLayer) map.removeLayer(activeTileLayer);
+  tileErrorCount = 0;
+  const effectiveProvider = (provider !== 'carto' && !apiKey) ? 'carto' : provider;
+  activeTileLayer = buildTileLayer(effectiveProvider, apiKey);
+  if (effectiveProvider !== 'carto') {
+    activeTileLayer.on('tileerror', () => {
+      tileErrorCount++;
+      if (tileErrorCount === 3) {
+        applyMapLayer('carto', '');
+        showToast('Map API key failed — switched to free CartoDB Dark tiles.', 'error');
+      }
+    });
+  }
+  activeTileLayer.addTo(map);
+  updateProviderBadge(effectiveProvider, apiKey);
+}
+
+const initMapCfg = getActiveMapConfig();
+applyMapLayer(initMapCfg.provider, initMapCfg.apiKey);
+
+function openMapKeyModal() {
+  const cfg = getActiveMapConfig();
+  document.getElementById('mk-provider').value = cfg.provider || 'mapbox';
+  document.getElementById('mk-key').value = cfg.apiKey || '';
+  document.getElementById('map-key-modal').classList.remove('hidden');
+}
+
+function closeMapKeyModal() {
+  document.getElementById('map-key-modal').classList.add('hidden');
+}
+
+function saveMapKey(e) {
+  e.preventDefault();
+  const provider = document.getElementById('mk-provider').value;
+  const apiKey = document.getElementById('mk-key').value.trim();
+  if (provider !== 'carto' && !apiKey) {
+    showToast('Enter an API key or choose CartoDB Dark (Free).', 'error');
+    return;
+  }
+  localStorage.setItem(MAP_STORAGE_KEY, JSON.stringify({ provider, apiKey }));
+  applyMapLayer(provider, apiKey);
+  closeMapKeyModal();
+  showToast(`Map layer updated (${provider.toUpperCase()}).`);
+}
+
+function resetMapKey() {
+  localStorage.removeItem(MAP_STORAGE_KEY);
+  const cfg = getActiveMapConfig();
+  applyMapLayer(cfg.provider, cfg.apiKey);
+  closeMapKeyModal();
+  showToast('Reverted to server default map configuration.');
+}
+
+// Control Room marker
+L.marker(CTRL, {
+  icon: L.divIcon({
+    html: '<div style="width:14px;height:14px;background:#00e5ff;border-radius:3px;border:2px solid #fff;box-shadow:0 0 10px #00e5ff88;"></div>',
+    className: '', iconSize: [14, 14], iconAnchor: [7, 7]
+  })
+}).addTo(map).bindPopup('<b style="font-family:sans-serif">⬜ JETT Control Room</b>');
+
+// Incident markers
+const SEV_COLORS = { Critical:'#ff4757', High:'#ffa502', Medium:'#eccc68', Low:'#2ed573' };
+INCIDENTS.forEach(inc => {
+  if (inc.latitude == null || inc.longitude == null) return;
+  const c = SEV_COLORS[inc.severity] || '#8899aa';
+  L.circleMarker([inc.latitude, inc.longitude], {
+    radius: inc.severity === 'Critical' ? 11 : 8,
+    color: c, fillColor: c, fillOpacity: .75, weight: 2
+  }).addTo(map).bindPopup(
+    `<div style="font-family:sans-serif;min-width:150px">
+      <b>${inc.title}</b><br>
+      <span style="color:#888;font-size:11px">${inc.kind} · ${inc.severity}</span><br>
+      ${inc.location}<br>Status: <b>${inc.status}</b>
+    </div>`
+  );
+});
+
+// ── Team GPS Tracking ───────────────────────────────────────────────────────
+const teamLayer = L.layerGroup().addTo(map);
+let teamMarkers = {};
+
+function mkTeamIcon(status) {
+  const onDuty = status === 'On duty';
+  const c = onDuty ? '#ffa502' : '#00e5ff';
+  return L.divIcon({
+    html: `<div style="position:relative;width:30px;height:30px;">
+      <div style="position:absolute;top:0;left:0;width:30px;height:30px;
+        border-radius:50%;background:${c}2a;animation:tm-pulse 2s infinite;"></div>
+      <div style="position:absolute;top:9px;left:9px;width:12px;height:12px;
+        border-radius:50%;background:${c};border:2px solid rgba(255,255,255,.85);
+        box-shadow:0 0 8px ${c}88;"></div>
+    </div>`,
+    className: '', iconSize: [30, 30], iconAnchor: [15, 15]
+  });
+}
+
+async function loadTeams() {
+  try {
+    const res = await fetch('/api/teams');
+    if (!res.ok) return;
+    const teams = await res.json();
+    Object.values(teamMarkers).forEach(m => teamLayer.removeLayer(m));
+    teamMarkers = {};
+    teams.forEach(t => {
+      const m = L.marker([t.lat, t.lon], { icon: mkTeamIcon(t.status) });
+      m.bindPopup(
+        `<div style="font-family:sans-serif;min-width:140px">
+          <b>👥 ${t.name}</b><br>
+          <span style="font-size:11px;color:#888">${t.specialty}</span><br>
+          Status: <b style="color:${t.status==='On duty'?'#ffa502':'#2ed573'}">${t.status}</b><br>
+          <span style="font-size:10px;color:#666">📍 ${t.lat.toFixed(4)}, ${t.lon.toFixed(4)}</span>
+        </div>`
+      );
+      teamLayer.addLayer(m);
+      teamMarkers[t.id] = m;
+    });
+  } catch(e) {}
+}
+loadTeams();
+setInterval(loadTeams, 5000);   // refresh GPS every 5 seconds
+
+// ── Live Road Routing (Mapbox Directions when key active, else OSRM) ─────────
+let routeLayer = null;
+
+async function fetchRoadRoute(lat, lon) {
+  const cfg = getActiveMapConfig();
+  if ((cfg.provider === 'mapbox' || cfg.provider === 'mapbox-satellite') && cfg.apiKey) {
+    try {
+      const mbUrl = `https://api.mapbox.com/directions/v5/mapbox/driving/${CTRL[1]},${CTRL[0]};${lon},${lat}?geometries=geojson&overview=full&access_token=${encodeURIComponent(cfg.apiKey)}`;
+      const res = await fetch(mbUrl);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.routes?.length) {
+          return { route: data.routes[0], engine: 'Mapbox Directions' };
+        }
+      }
+    } catch(e) {}
+  }
+  const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${CTRL[1]},${CTRL[0]};${lon},${lat}?overview=full&geometries=geojson`;
+  const res = await fetch(osrmUrl);
+  if (!res.ok) throw new Error(`OSRM HTTP ${res.status}`);
+  const data = await res.json();
+  if (!data.routes?.length) throw new Error('No route found');
+  return { route: data.routes[0], engine: 'OSRM real roads' };
+}
+
+async function showRoute(lat, lon, name) {
+  if (routeLayer) { map.removeLayer(routeLayer); routeLayer = null; }
+  const ri = document.getElementById('ri');
+  ri.innerHTML = '<span style="color:var(--cyan)">⏳ Fetching live road route…</span>';
+  ri.classList.remove('hidden');
+
+  try {
+    const { route, engine } = await fetchRoadRoute(lat, lon);
+    const coords = route.geometry.coordinates.map(c => [c[1], c[0]]);
+    const km = (route.distance / 1000).toFixed(1);
+    const min = Math.ceil(route.duration / 60);
+    routeLayer = L.polyline(coords, {
+      color: '#a29bfe', weight: 4, opacity: .9, lineJoin: 'round'
+    }).addTo(map);
+    map.fitBounds(routeLayer.getBounds(), { padding: [30, 30] });
+    ri.innerHTML =
+      `<strong>📍 ${name}</strong>
+       <span>🛣 ${km} km</span>
+       <span>⏱ ~${min} min via ${engine}</span>
+       <button class="btn sec sm" onclick="clearRoute()">✕ Clear</button>`;
+  } catch(e) {
+    ri.innerHTML = `<span style="color:var(--red)">⚠️ Could not fetch live route (needs internet). ${e.message}</span>`;
+  }
+}
+
+function clearRoute() {
+  if (routeLayer) { map.removeLayer(routeLayer); routeLayer = null; }
+  const ri = document.getElementById('ri');
+  ri.classList.add('hidden');
+  ri.innerHTML = '';
+}
+
+// ── Auto-Detect (keyword AI) ────────────────────────────────────────────────
+let detTimer = null;
+function triggerDetect() {
+  clearTimeout(detTimer);
+  detTimer = setTimeout(runDetect, 500);
+}
+async function runDetect() {
+  const title = document.querySelector('[name=title]')?.value || '';
+  const desc  = document.querySelector('[name=description]')?.value || '';
+  if (title.length < 3 && desc.length < 3) { hideBanner(); return; }
+  try {
+    const res = await fetch('/api/auto-detect', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title, description: desc })
+    });
+    const data = await res.json();
+    const sevSel  = document.querySelector('[name=severity]');
+    const kindSel = document.querySelector('[name=kind]');
+    if (sevSel) sevSel.value = data.severity;
+    if (kindSel && data.kind !== 'Other') kindSel.value = data.kind;
+    showBanner(data.severity, data.kind);
+  } catch(e) {}
+}
+function showBanner(sev, kind) {
+  const b = document.getElementById('det-banner');
+  const m = document.getElementById('det-msg');
+  if (!b) return;
+  const icons = { Critical:'🚨', High:'⚠️', Medium:'📋', Low:'ℹ️' };
+  m.textContent = `${icons[sev]||'🤖'} AI Detection: ${sev} severity · ${kind}`;
+  b.className = `det-banner ${sev.toLowerCase()}`;
+}
+function hideBanner() {
+  const b = document.getElementById('det-banner');
+  if (b) b.className = 'det-banner hidden';
+}
+
+// ── Charts ──────────────────────────────────────────────────────────────────
+const sevCnt = { Critical:0, High:0, Medium:0, Low:0 };
+INCIDENTS.forEach(i => { if (sevCnt[i.severity] !== undefined) sevCnt[i.severity]++; });
+
+const statCtx = document.getElementById('cstat');
+if (statCtx) new Chart(statCtx, {
+  type: 'doughnut',
+  data: {
+    labels: ['Open', 'Assigned', 'Resolved'],
+    datasets: [{ data: [STATS.open, STATS.assigned, STATS.resolved],
+      backgroundColor: ['rgba(255,71,87,.5)','rgba(255,165,2,.5)','rgba(46,213,115,.5)'],
+      borderColor: ['#ff4757','#ffa502','#2ed573'], borderWidth: 2 }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false, cutout: '65%',
+    plugins: { legend: { position:'bottom', labels: { color:'#8899aa', padding:10, font:{size:10} } } }
+  }
+});
+
+const sevCtx = document.getElementById('csev');
+if (sevCtx) new Chart(sevCtx, {
+  type: 'bar',
+  data: {
+    labels: ['Critical','High','Medium','Low'],
+    datasets: [{
+      label: 'Count',
+      data: [sevCnt.Critical, sevCnt.High, sevCnt.Medium, sevCnt.Low],
+      backgroundColor: ['rgba(255,71,87,.4)','rgba(255,165,2,.4)','rgba(236,204,104,.4)','rgba(46,213,115,.4)'],
+      borderColor: ['#ff4757','#ffa502','#eccc68','#2ed573'],
+      borderWidth: 2, borderRadius: 5
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display:false } },
+    scales: {
+      x: { grid:{color:'rgba(255,255,255,.04)'}, ticks:{color:'#8899aa',font:{size:10}} },
+      y: { grid:{color:'rgba(255,255,255,.04)'}, ticks:{color:'#8899aa',font:{size:10},stepSize:1}, beginAtZero:true }
+    }
+  }
+});
+</script>
+</body>
+</html>
