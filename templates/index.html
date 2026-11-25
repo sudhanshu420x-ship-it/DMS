@@ -364,13 +364,17 @@ footer{text-align:center;color:#50657a;font-size:11px;padding:20px;position:rela
                 <option value="{{ t.id }}">{{ t.name }}</option>
                 {% endif %}{% endfor %}
               </select>
-              <button class="btn asgn sm" type="submit" {% if not teams | selectattr('status','equalto','Available') | list %}disabled{% endif %}>Assign</button>
+              {% if stats.available > 0 %}
+              <button class="btn asgn sm" type="submit">Assign</button>
+              {% else %}
+              <button class="btn asgn sm" type="submit" disabled>Assign</button>
+              {% endif %}
             </form>
             <form action="{{ url_for('resolve', incident_id=i.id) }}" method="post">
               <button class="btn res sm" type="submit">✓ Resolve</button>
             </form>
-            {% if i.latitude %}
-            <button class="btn rte sm"
+            {% if i.latitude is not none and i.longitude is not none %}
+            <button class="btn rte sm" type="button"
               data-lat="{{ i.latitude }}" data-lon="{{ i.longitude }}" data-title="{{ i.title }}"
               onclick="showRoute(parseFloat(this.dataset.lat),parseFloat(this.dataset.lon),this.dataset.title)">
               📍 Navigate
@@ -481,13 +485,24 @@ footer{text-align:center;color:#50657a;font-size:11px;padding:20px;position:rela
 
 <footer>JETT Student Project · Flask + SQLite + Priority Queue + Dijkstra + OSRM Navigation · Not an official emergency dispatch service</footer>
 
+<div id="jett-data" hidden
+     data-stats="{{ stats | tojson | forceescape }}"
+     data-incidents="{{ incidents | tojson | forceescape }}"></div>
+
 <!-- Scripts -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-// ── Embedded data from Flask ────────────────────────────────────────────────
-const STATS = {{ stats | tojson }};
-const INCIDENTS = {{ incidents | tojson }};
+// ── Embedded data from Flask (parsed safely from data attributes) ───────────
+const jettDataEl = document.getElementById('jett-data');
+const STATS = JSON.parse(jettDataEl?.dataset.stats || '{}');
+const INCIDENTS = JSON.parse(jettDataEl?.dataset.incidents || '[]');
 const CTRL = [30.74, 76.78];   // Control Room coordinates
+
+function escHtml(val) {
+  return String(val ?? '').replace(/[&<>"']/g, ch => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  })[ch]);
+}
 
 // ── Clock ───────────────────────────────────────────────────────────────────
 function tickClock() {
@@ -543,9 +558,9 @@ INCIDENTS.forEach(inc => {
     color: c, fillColor: c, fillOpacity: .75, weight: 2
   }).addTo(map).bindPopup(
     `<div style="font-family:sans-serif;min-width:150px">
-      <b>${inc.title}</b><br>
-      <span style="color:#888;font-size:11px">${inc.kind} · ${inc.severity}</span><br>
-      ${inc.location}<br>Status: <b>${inc.status}</b>
+      <b>${escHtml(inc.title)}</b><br>
+      <span style="color:#888;font-size:11px">${escHtml(inc.kind)} · ${escHtml(inc.severity)}</span><br>
+      ${escHtml(inc.location)}<br>Status: <b>${escHtml(inc.status)}</b>
     </div>`
   );
 });
@@ -580,9 +595,9 @@ async function loadTeams() {
       const m = L.marker([t.lat, t.lon], { icon: mkTeamIcon(t.status) });
       m.bindPopup(
         `<div style="font-family:sans-serif;min-width:140px">
-          <b>👥 ${t.name}</b><br>
-          <span style="font-size:11px;color:#888">${t.specialty}</span><br>
-          Status: <b style="color:${t.status==='On duty'?'#ffa502':'#2ed573'}">${t.status}</b><br>
+          <b>👥 ${escHtml(t.name)}</b><br>
+          <span style="font-size:11px;color:#888">${escHtml(t.specialty)}</span><br>
+          Status: <b style="color:${t.status==='On duty'?'#ffa502':'#2ed573'}">${escHtml(t.status)}</b><br>
           <span style="font-size:10px;color:#666">📍 ${t.lat.toFixed(4)}, ${t.lon.toFixed(4)}</span>
         </div>`
       );
@@ -618,12 +633,12 @@ async function showRoute(lat, lon, name) {
     }).addTo(map);
     map.fitBounds(routeLayer.getBounds(), { padding: [30, 30] });
     ri.innerHTML =
-      `<strong>📍 ${name}</strong>
+      `<strong>📍 ${escHtml(name)}</strong>
        <span>🛣 ${km} km</span>
        <span>⏱ ~${min} min via real roads</span>
-       <button class="btn sec sm" onclick="clearRoute()">✕ Clear</button>`;
+       <button class="btn sec sm" type="button" onclick="clearRoute()">✕ Clear</button>`;
   } catch(e) {
-    ri.innerHTML = `<span style="color:var(--red)">⚠️ Could not fetch live route (needs internet). ${e.message}</span>`;
+    ri.innerHTML = `<span style="color:var(--red)">⚠️ Could not fetch live route (needs internet). ${escHtml(e.message)}</span>`;
   }
 }
 

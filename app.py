@@ -200,8 +200,12 @@ def new_incident():
         flash("Please enter an incident title and location.", "error")
         return redirect(url_for("dashboard"))
     try:
-        lat = float(request.form["latitude"])  if request.form.get("latitude")  else None
-        lon = float(request.form["longitude"]) if request.form.get("longitude") else None
+        lat_raw = request.form.get("latitude", "").strip()
+        lon_raw = request.form.get("longitude", "").strip()
+        lat = float(lat_raw) if lat_raw else None
+        lon = float(lon_raw) if lon_raw else None
+        if (lat is None) != (lon is None):
+            raise ValueError
         if lat is not None and not (-90 <= lat <= 90 and -180 <= lon <= 180):
             raise ValueError
     except ValueError:
