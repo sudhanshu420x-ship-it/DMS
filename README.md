@@ -7,36 +7,9 @@ A Flask + SQLite command-center dashboard for disaster and rescue dispatch simul
 ## ✨ Features
 
 - **🛰 Real-time Team GPS Tracking:** Live team markers (`/api/teams`) auto-refresh every 5 seconds on the tactical map.
-- **🗺 Live Shortest Road Navigation:** Uses **Mapbox Directions** (when a Mapbox key is configured) or **OSRM** to draw real road routes from Control Room to incidents with distance & ETA.
-- **🔑 Map API Key Support:** Supports **Mapbox** (`dark-v11` / `satellite-streets-v12`) and **MapTiler** via `.env` / Vercel Environment Variables or the in-app **🔑 Map Key** button, with automatic fallback to free **CartoDB Dark** tiles.
+- **🗺 Interactive Tactical Map (No API Key Required):** Uses Leaflet with free CartoDB Dark / OpenStreetMap tiles and **OSRM** for live shortest-road navigation with distance & ETA.
 - **🤖 Automatic Emergency Detection:** Real-time keyword classification (`/api/auto-detect`) auto-fills severity and category as you type an incident report.
 - **📊 Incident Analytics & Priority Queue:** Heap-based severity sorting (`Critical → Low`) and interactive Chart.js status/severity breakdowns.
-
----
-
-## 🔑 Map API Key Setup
-
-The app works **out-of-the-box with zero API keys** (using free CartoDB Dark tiles and OSRM routing). To use **Mapbox** or **MapTiler**:
-
-### Option A: Local `.env` file
-1. Copy `.env.example` to `.env`:
-   ```bash
-   cp .env.example .env
-   ```
-2. Add your public token in `.env`:
-   ```env
-   MAP_API_KEY=pk.your_mapbox_or_maptiler_key_here
-   MAP_PROVIDER=auto
-   ```
-   *(Options for `MAP_PROVIDER`: `auto`, `mapbox`, `mapbox-satellite`, `maptiler`, `carto`)*
-
-### Option B: Vercel Environment Variables
-1. Open your Vercel project → **Settings → Environment Variables**.
-2. Add `MAP_API_KEY` with your Mapbox (`pk....`) or MapTiler key.
-3. Redeploy for the environment variable to take effect.
-
-### Option C: In-App UI Switcher
-Click **🔑 Map Key** directly inside the **Live Tactical Map** panel header to test or switch providers/keys immediately in the browser.
 
 ---
 
@@ -49,8 +22,7 @@ This project is configured for deployment on [Vercel](https://vercel.com/) with 
 2. Go to [Vercel](https://vercel.com/) and log in.
 3. Click **Add New... → Project** and select your GitHub repository.
 4. Keep the default settings (Framework Preset: *Other*, Root Directory: `./`).
-5. *(Optional)* Add `MAP_API_KEY` under **Environment Variables**.
-6. Click **Deploy**. Vercel will install dependencies from `requirements.txt` and host the application serverlessly.
+5. Click **Deploy**. Vercel will install dependencies from `requirements.txt` and host the application serverlessly.
 
 ### Option 2: Deploy via Vercel CLI
 ```bash
@@ -97,7 +69,6 @@ python app.py
 ├── app.py                 # Core Flask application, routes, GPS & AI detect
 ├── requirements.txt       # Dependencies (Flask)
 ├── vercel.json            # Vercel routing and rewrite configuration
-├── .env.example           # Environment variable template (MAP_API_KEY)
 ├── .vercelignore          # Files excluded from Vercel deployment bundle
 └── .gitignore             # Files excluded from Git version control
 ```

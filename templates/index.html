@@ -228,22 +228,6 @@ select option{background:#0a1422}
 .toast.success{background:rgba(46,213,115,.13);border-color:rgba(46,213,115,.3);color:#90ffe0}
 .toast.error{background:rgba(255,71,87,.13);border-color:rgba(255,71,87,.3);color:#ffa8b0}
 .toast-x{background:none;border:none;color:inherit;cursor:pointer;opacity:.7;font-size:16px;padding:0 2px;font-family:inherit}
-
-/* Map API Key Modal */
-.modal-bg{
-  position:fixed;inset:0;z-index:1100;background:rgba(4,8,16,.78);
-  backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:18px;
-}
-.modal-bg.hidden{display:none}
-.modal-box{
-  width:100%;max-width:440px;background:#0e1726;
-  border:1px solid rgba(0,229,255,.25);border-radius:16px;
-  padding:22px;box-shadow:0 18px 48px rgba(0,0,0,.6);animation:fadeIn .2s ease;
-}
-.modal-box h3{font-size:15px;margin-bottom:6px}
-.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:14px;flex-wrap:wrap}
-.modal-box .btn.prim{width:auto}
-
 footer{text-align:center;color:#50657a;font-size:11px;padding:20px;position:relative;z-index:1}
 
 /* Keyframes */
@@ -411,8 +395,6 @@ footer{text-align:center;color:#50657a;font-size:11px;padding:20px;position:rela
           <h2>🗺 Live Tactical Map</h2>
           <div class="mc">
             <span class="gps-pill">📡 GPS LIVE</span>
-            <span class="pill" id="map-provider-badge">CARTO</span>
-            <button class="btn sec sm" type="button" onclick="openMapKeyModal()">🔑 Map Key</button>
             <button class="btn sec sm" type="button" onclick="clearRoute()">Clear Route</button>
           </div>
         </div>
@@ -497,38 +479,7 @@ footer{text-align:center;color:#50657a;font-size:11px;padding:20px;position:rela
   </div><!-- /main-grid -->
 </div><!-- /layout -->
 
-<!-- Map API Key Modal -->
-<div id="map-key-modal" class="modal-bg hidden" onclick="if(event.target===this)closeMapKeyModal()">
-  <div class="modal-box">
-    <h3>🔑 Configure Map API Key</h3>
-    <p class="mt" style="font-size:11px;margin-bottom:14px">
-      Connect a Mapbox or MapTiler API key for enhanced tiles &amp; routing, or leave blank for free CartoDB + OSRM.
-      For permanent deployment, set <code>MAP_API_KEY</code> in <code>.env</code> or Vercel Environment Variables.
-    </p>
-    <form onsubmit="saveMapKey(event)">
-      <div class="f" style="margin-bottom:11px">
-        <label>Map Provider</label>
-        <select id="mk-provider">
-          <option value="mapbox">Mapbox Dark (pk. token)</option>
-          <option value="mapbox-satellite">Mapbox Satellite Streets (pk. token)</option>
-          <option value="maptiler">MapTiler Dark</option>
-          <option value="carto">CartoDB Dark (Free / No Key)</option>
-        </select>
-      </div>
-      <div class="f">
-        <label>API Key / Access Token</label>
-        <input id="mk-key" type="text" placeholder="pk.eyJ1Ijo... or MapTiler key">
-      </div>
-      <div class="modal-actions">
-        <button class="btn dng sm" type="button" onclick="resetMapKey()">Use Server Default</button>
-        <button class="btn sec sm" type="button" onclick="closeMapKeyModal()">Cancel</button>
-        <button class="btn prim sm" type="submit">Apply Map Key</button>
-      </div>
-    </form>
-  </div>
-</div>
-
-<footer>JETT Student Project · Flask + SQLite + Priority Queue + Dijkstra + OSRM/Mapbox Navigation · Not an official emergency dispatch service</footer>
+<footer>JETT Student Project · Flask + SQLite + Priority Queue + Dijkstra + OSRM Navigation · Not an official emergency dispatch service</footer>
 
 <!-- Scripts -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -536,7 +487,6 @@ footer{text-align:center;color:#50657a;font-size:11px;padding:20px;position:rela
 // ── Embedded data from Flask ────────────────────────────────────────────────
 const STATS = {{ stats | tojson }};
 const INCIDENTS = {{ incidents | tojson }};
-const SERVER_MAP_CONFIG = {{ map_config | tojson }};
 const CTRL = [30.74, 76.78];   // Control Room coordinates
 
 // ── Clock ───────────────────────────────────────────────────────────────────
@@ -548,135 +498,32 @@ function tickClock() {
 }
 setInterval(tickClock, 1000); tickClock();
 
-// ── Toast notifications ─────────────────────────────────────────────────────
-function showToast(msg, type = 'success') {
-  const box = document.getElementById('toast-box');
-  if (!box) return;
-  const el = document.createElement('div');
-  el.className = `toast ${type === 'error' ? 'error' : 'success'}`;
-  const span = document.createElement('span');
-  span.textContent = msg;
-  const btn = document.createElement('button');
-  btn.className = 'toast-x';
-  btn.textContent = '×';
-  btn.onclick = () => el.remove();
-  el.append(span, btn);
-  box.appendChild(el);
-  setTimeout(() => { el.style.opacity = '0'; }, 4600);
-  setTimeout(() => el.remove(), 5000);
-}
-
+// ── Auto-dismiss server flash toasts ───────────────────────────────────────
 document.querySelectorAll('.toast[data-auto]').forEach(t => {
   setTimeout(() => { t.style.opacity = '0'; }, 4600);
   setTimeout(() => t.remove(), 5000);
 });
 
-// ── Map & API Key Provider Layer ────────────────────────────────────────────
-const MAP_STORAGE_KEY = 'jett_map_config';
+// ── Map (no API key required — CartoDB Dark with OpenStreetMap fallback) ────
 const map = L.map('map').setView(CTRL, 11);
-let activeTileLayer = null;
-let tileErrorCount = 0;
-
-function getActiveMapConfig() {
-  try {
-    const saved = localStorage.getItem(MAP_STORAGE_KEY);
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      if (parsed && parsed.provider) return parsed;
-    }
-  } catch(e) {}
-  return SERVER_MAP_CONFIG || { provider: 'carto', apiKey: '' };
-}
-
-function buildTileLayer(provider, apiKey) {
-  if ((provider === 'mapbox' || provider === 'mapbox-satellite') && apiKey) {
-    const style = provider === 'mapbox-satellite' ? 'satellite-streets-v12' : 'dark-v11';
-    return L.tileLayer(
-      `https://api.mapbox.com/styles/v1/mapbox/${style}/tiles/{z}/{x}/{y}?access_token={accessToken}`,
-      {
-        attribution: '© Mapbox © OpenStreetMap',
-        tileSize: 512, zoomOffset: -1, maxZoom: 19,
-        accessToken: apiKey
-      }
-    );
+const primaryTiles = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+  attribution: '© OpenStreetMap contributors © CARTO',
+  subdomains: 'abcd', maxZoom: 18
+});
+let tileErrors = 0;
+let fallbackAdded = false;
+primaryTiles.on('tileerror', () => {
+  tileErrors++;
+  if (tileErrors >= 3 && !fallbackAdded) {
+    fallbackAdded = true;
+    map.removeLayer(primaryTiles);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors',
+      maxZoom: 19
+    }).addTo(map);
   }
-  if (provider === 'maptiler' && apiKey) {
-    return L.tileLayer(
-      `https://api.maptiler.com/maps/streets-v2-dark/256/{z}/{x}/{y}.png?key={accessToken}`,
-      {
-        attribution: '© MapTiler © OpenStreetMap',
-        maxZoom: 19, accessToken: apiKey
-      }
-    );
-  }
-  return L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-    attribution: '© OpenStreetMap contributors © CARTO',
-    subdomains: 'abcd', maxZoom: 18
-  });
-}
-
-function updateProviderBadge(provider, apiKey) {
-  const badge = document.getElementById('map-provider-badge');
-  if (!badge) return;
-  if (provider === 'mapbox' && apiKey) badge.textContent = '🔑 MAPBOX';
-  else if (provider === 'mapbox-satellite' && apiKey) badge.textContent = '🛰 MAPBOX SAT';
-  else if (provider === 'maptiler' && apiKey) badge.textContent = '🔑 MAPTILER';
-  else badge.textContent = 'CARTO FREE';
-}
-
-function applyMapLayer(provider, apiKey) {
-  if (activeTileLayer) map.removeLayer(activeTileLayer);
-  tileErrorCount = 0;
-  const effectiveProvider = (provider !== 'carto' && !apiKey) ? 'carto' : provider;
-  activeTileLayer = buildTileLayer(effectiveProvider, apiKey);
-  if (effectiveProvider !== 'carto') {
-    activeTileLayer.on('tileerror', () => {
-      tileErrorCount++;
-      if (tileErrorCount === 3) {
-        applyMapLayer('carto', '');
-        showToast('Map API key failed — switched to free CartoDB Dark tiles.', 'error');
-      }
-    });
-  }
-  activeTileLayer.addTo(map);
-  updateProviderBadge(effectiveProvider, apiKey);
-}
-
-const initMapCfg = getActiveMapConfig();
-applyMapLayer(initMapCfg.provider, initMapCfg.apiKey);
-
-function openMapKeyModal() {
-  const cfg = getActiveMapConfig();
-  document.getElementById('mk-provider').value = cfg.provider || 'mapbox';
-  document.getElementById('mk-key').value = cfg.apiKey || '';
-  document.getElementById('map-key-modal').classList.remove('hidden');
-}
-
-function closeMapKeyModal() {
-  document.getElementById('map-key-modal').classList.add('hidden');
-}
-
-function saveMapKey(e) {
-  e.preventDefault();
-  const provider = document.getElementById('mk-provider').value;
-  const apiKey = document.getElementById('mk-key').value.trim();
-  if (provider !== 'carto' && !apiKey) {
-    showToast('Enter an API key or choose CartoDB Dark (Free).', 'error');
-    return;
-  }
-  localStorage.setItem(MAP_STORAGE_KEY, JSON.stringify({ provider, apiKey }));
-  applyMapLayer(provider, apiKey);
-  closeMapKeyModal();
-  showToast(`Map layer updated (${provider.toUpperCase()}).`);
-}
-
-function resetMapKey() {
-  localStorage.removeItem(MAP_STORAGE_KEY);
-  const cfg = getActiveMapConfig();
-  applyMapLayer(cfg.provider, cfg.apiKey);
-  closeMapKeyModal();
-  showToast('Reverted to server default map configuration.');
-}
+});
+primaryTiles.addTo(map);
 
 // Control Room marker
 L.marker(CTRL, {
@@ -747,39 +594,22 @@ async function loadTeams() {
 loadTeams();
 setInterval(loadTeams, 5000);   // refresh GPS every 5 seconds
 
-// ── Live Road Routing (Mapbox Directions when key active, else OSRM) ─────────
+// ── OSRM Live Road Routing (free, no API key required) ──────────────────────
 let routeLayer = null;
-
-async function fetchRoadRoute(lat, lon) {
-  const cfg = getActiveMapConfig();
-  if ((cfg.provider === 'mapbox' || cfg.provider === 'mapbox-satellite') && cfg.apiKey) {
-    try {
-      const mbUrl = `https://api.mapbox.com/directions/v5/mapbox/driving/${CTRL[1]},${CTRL[0]};${lon},${lat}?geometries=geojson&overview=full&access_token=${encodeURIComponent(cfg.apiKey)}`;
-      const res = await fetch(mbUrl);
-      if (res.ok) {
-        const data = await res.json();
-        if (data.routes?.length) {
-          return { route: data.routes[0], engine: 'Mapbox Directions' };
-        }
-      }
-    } catch(e) {}
-  }
-  const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${CTRL[1]},${CTRL[0]};${lon},${lat}?overview=full&geometries=geojson`;
-  const res = await fetch(osrmUrl);
-  if (!res.ok) throw new Error(`OSRM HTTP ${res.status}`);
-  const data = await res.json();
-  if (!data.routes?.length) throw new Error('No route found');
-  return { route: data.routes[0], engine: 'OSRM real roads' };
-}
 
 async function showRoute(lat, lon, name) {
   if (routeLayer) { map.removeLayer(routeLayer); routeLayer = null; }
   const ri = document.getElementById('ri');
-  ri.innerHTML = '<span style="color:var(--cyan)">⏳ Fetching live road route…</span>';
+  ri.innerHTML = '<span style="color:var(--cyan)">⏳ Fetching live road route from OSRM…</span>';
   ri.classList.remove('hidden');
 
+  const url = `https://router.project-osrm.org/route/v1/driving/${CTRL[1]},${CTRL[0]};${lon},${lat}?overview=full&geometries=geojson`;
   try {
-    const { route, engine } = await fetchRoadRoute(lat, lon);
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`OSRM HTTP ${res.status}`);
+    const data = await res.json();
+    if (!data.routes?.length) throw new Error('No route found');
+    const route = data.routes[0];
     const coords = route.geometry.coordinates.map(c => [c[1], c[0]]);
     const km = (route.distance / 1000).toFixed(1);
     const min = Math.ceil(route.duration / 60);
@@ -790,7 +620,7 @@ async function showRoute(lat, lon, name) {
     ri.innerHTML =
       `<strong>📍 ${name}</strong>
        <span>🛣 ${km} km</span>
-       <span>⏱ ~${min} min via ${engine}</span>
+       <span>⏱ ~${min} min via real roads</span>
        <button class="btn sec sm" onclick="clearRoute()">✕ Clear</button>`;
   } catch(e) {
     ri.innerHTML = `<span style="color:var(--red)">⚠️ Could not fetch live route (needs internet). ${e.message}</span>`;

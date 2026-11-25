@@ -9,24 +9,6 @@ import tempfile
 
 BASE = Path(__file__).resolve().parent
 
-
-def _load_env_file(env_path: Path):
-    """Load key=value pairs from a local .env file without extra dependencies."""
-    if not env_path.is_file():
-        return
-    for raw in env_path.read_text(encoding="utf-8").splitlines():
-        line = raw.strip()
-        if not line or line.startswith("#") or "=" not in line:
-            continue
-        key, val = line.split("=", 1)
-        key = key.strip()
-        val = val.strip().strip('"').strip("'")
-        if key and key not in os.environ:
-            os.environ[key] = val
-
-
-_load_env_file(BASE / ".env")
-
 if os.environ.get("VERCEL"):
     DB = Path(tempfile.gettempdir()) / "jett.db"
 else:
@@ -34,33 +16,6 @@ else:
 
 app = Flask(__name__, template_folder=str(BASE / "templates"))
 app.secret_key = os.environ.get("SECRET_KEY", "change-this-demo-secret-key")
-
-
-def get_map_config():
-    """Return map provider and client-side public tile API key from environment."""
-    mapbox_key = (
-        os.environ.get("MAPBOX_ACCESS_TOKEN", "").strip()
-        or os.environ.get("MAPBOX_API_KEY", "").strip()
-    )
-    maptiler_key = os.environ.get("MAPTILER_API_KEY", "").strip()
-    generic_key = os.environ.get("MAP_API_KEY", "").strip()
-    api_key = generic_key or mapbox_key or maptiler_key
-
-    provider = os.environ.get("MAP_PROVIDER", "auto").strip().lower()
-    valid = {"mapbox", "mapbox-satellite", "maptiler", "carto"}
-    if provider not in valid:
-        if api_key and (mapbox_key or api_key.startswith("pk.")):
-            provider = "mapbox"
-        elif api_key:
-            provider = "maptiler"
-        else:
-            provider = "carto"
-
-    return {
-        "provider": provider,
-        "apiKey": api_key,
-        "hasServerKey": bool(api_key),
-    }
 
 
 class VercelPathFixMiddleware:
@@ -231,19 +186,7 @@ def dashboard():
         "critical": sum(i["severity"] == "Critical" for i in incidents),
         "available":sum(t["status"] == "Available" for t in teams),
     }
-    return render_template(
-        "index.html",
-        incidents=ordered,
-        teams=teams,
-        stats=stats,
-        map_config=get_map_config(),
-    )
-
-
-@app.route("/api/map-config")
-def api_map_config():
-    """Expose public map tile provider and client token configuration."""
-    return jsonify(get_map_config())
+    return render_template("index.html", incidents=ordered, teams=teams, stats=stats)
 
 
 @app.route("/incidents/new", methods=["POST"])
